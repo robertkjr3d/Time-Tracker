@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Time Tracker.Tests/Time Tracker.Tests.csproj" />
+  <Project Path="Time Tracker/Time Tracker.csproj" />
+</Solution>

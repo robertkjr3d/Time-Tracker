@@ -1,0 +1,120 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Time_Tracker.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DesignWidth="820"
+        d:DesignHeight="500"
+        x:Class="Time_Tracker.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Time Tracker"
+        Width="760"
+        Height="420"
+        MinWidth="640"
+        MinHeight="380">
+
+    <Grid RowDefinitions="Auto,*" Margin="12">
+        <Border Grid.Row="0" Padding="10" Background="#2F4554" BorderBrush="#4E6D80" BorderThickness="1" CornerRadius="4">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock VerticalAlignment="Center" Foreground="#F4FBFF" FontWeight="SemiBold" Text="Parent" />
+                    <ComboBox Width="180"
+                              Background="#F6FBFF"
+                              Foreground="#173042"
+                              BorderBrush="#63B3ED"
+                              ItemsSource="{Binding ParentCategories}"
+                              SelectedItem="{Binding SelectedParentCategory}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Foreground="#173042" Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBox x:Name="NewParentCategoryTextBox"
+                             Width="180"
+                             Background="#FFF7E8"
+                             Foreground="#4A3410"
+                             BorderBrush="#F2B75E"
+                             VerticalContentAlignment="Center"
+                             Watermark="New parent/category"
+                             Text="{Binding NewParentCategoryName, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="NewParentCategory_KeyDown" />
+                    <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="AddParentCategory_Click">
+                        <ToolTip.Tip>Add parent/category</ToolTip.Tip>
+                        <TextBlock Foreground="White" FontSize="16" FontWeight="SemiBold" Text="+" />
+                    </Button>
+                </StackPanel>
+
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="CreateActivity_Click">
+                            <ToolTip.Tip>Create and start activity</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="16" FontWeight="SemiBold" Text="+" />
+                        </Button>
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Command="{Binding StartActivityCommand}">
+                            <ToolTip.Tip>Start selected activity</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="15" Text="▶" />
+                        </Button>
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Command="{Binding StopActivityCommand}">
+                            <ToolTip.Tip>Stop selected activity</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="14" Text="■" />
+                        </Button>
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="History_Click">
+                            <ToolTip.Tip>Open selected activity history</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="15" Text="☰" />
+                        </Button>
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="ExportCsv_Click">
+                            <ToolTip.Tip>Export all entries to CSV</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="15" Text="⇩" />
+                        </Button>
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="About_Click">
+                            <ToolTip.Tip>About</ToolTip.Tip>
+                            <TextBlock Foreground="White" FontSize="15" Text="?" />
+                        </Button>
+                    </StackPanel>
+
+                    <TextBox x:Name="NewActivityNameTextBox"
+                             Background="#FFFFFF"
+                             Foreground="#173042"
+                             BorderBrush="#63B3ED"
+                             VerticalContentAlignment="Center"
+                             Watermark="Activity"
+                             Text="{Binding NewActivityName, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="NewActivityName_KeyDown" />
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Margin="0,8,0,0" BorderBrush="#36424A" BorderThickness="1" CornerRadius="4">
+            <DataGrid ItemsSource="{Binding Activities}"
+                      SelectedItem="{Binding SelectedActivity}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserSortColumns="True"
+                      GridLinesVisibility="Horizontal"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Activity" Binding="{Binding Name}" Width="3*" />
+                    <DataGridTextColumn Header="Duration" Binding="{Binding DurationText}" Width="*" />
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" />
+                    <DataGridTextColumn Header="Created" Binding="{Binding CreatedAtLocal}" Width="2*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <Border Grid.RowSpan="2"
+                ZIndex="10"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,12,12"
+                MaxWidth="320"
+                Padding="12,8"
+                Background="#DD1E2A33"
+                CornerRadius="6"
+                IsVisible="{Binding IsStatusVisible}">
+            <TextBlock Foreground="White" TextWrapping="Wrap" Text="{Binding StatusMessage}" />
+        </Border>
+    </Grid>
+</Window>

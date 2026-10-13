@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:vm="using:Time_Tracker.ViewModels"
+		x:Class="Time_Tracker.Dialogs.EditSessionWindow"
+		x:DataType="vm:EditSessionDialogViewModel"
+		Width="520"
+		Height="360"
+		CanResize="False"
+		WindowStartupLocation="CenterOwner"
+		Title="Edit Time Entry">
+	<Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnDefinitions="140,*" Margin="16">
+		<TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" Text="Activity" />
+		<TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,12" Text="{Binding ActivityName}" />
+
+		<TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" Text="Start" />
+		<TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,12" Watermark="yyyy-MM-dd HH:mm:ss" Text="{Binding StartText}" />
+
+		<TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Center" Text="End" />
+		<TextBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,12" Watermark="Leave blank for running" Text="{Binding EndText}" />
+
+		<TextBlock Grid.Row="3" Grid.Column="0" Margin="0,0,12,12" VerticalAlignment="Top" Text="Notes" />
+		<TextBox Grid.Row="3" Grid.Column="1" Margin="0,0,0,12" AcceptsReturn="True" Height="120" TextWrapping="Wrap" Text="{Binding Notes}" />
+
+		<TextBlock Grid.Row="4" Grid.ColumnSpan="2" Foreground="IndianRed" Text="{Binding ErrorMessage}" />
+
+		<StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+			<Button Content="Cancel" Click="Cancel_Click" />
+			<Button Content="Save" Classes="accent" Click="Save_Click" />
+		</StackPanel>
+	</Grid>
+</Window>

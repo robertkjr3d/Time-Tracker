@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		x:Class="Time_Tracker.Dialogs.AboutWindow"
+		Width="460"
+		Height="280"
+		CanResize="False"
+		WindowStartupLocation="CenterOwner"
+		Title="About Time Tracker">
+	<StackPanel Margin="20" Spacing="12">
+		<TextBlock FontSize="22" FontWeight="Bold" Text="Time Tracker" />
+		<TextBlock TextWrapping="Wrap"
+				   Text="A simple desktop time tracker inspired by Zanami Time Tracker, rebuilt with durable SQLite storage, editable entries, and CSV export." />
+
+		<StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Top">
+			<TextBlock TextWrapping="Wrap"
+					   Text="Credit Robert Koernke's Consulting. " VerticalAlignment="Center" />
+			<HyperlinkButton Content="robertkjr@provide.net" NavigateUri="mailto:robertkjr@provide.net" />
+		</StackPanel>
+		
+
+
+		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+			<Button Content="Close" Click="Close_Click" />
+		</StackPanel>
+	</StackPanel>
+</Window>

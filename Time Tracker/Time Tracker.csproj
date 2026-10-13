@@ -5,6 +5,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Time Tracker</AssemblyName>
+    <Product>Time Tracker</Product>
+    <Company>Robert Koernke's Consulting</Company>
+    <Authors>Robert Koernke</Authors>
+    <Version>0.1.0</Version>
+    <FileVersion>0.1.0.0</FileVersion>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <PublishDir>$(MSBuildProjectDirectory)\bin\Release\publish\</PublishDir>
+    <Description>A Simple Time Tracking Application.</Description>
+    <Copyright>2026</Copyright>
+    <PackageProjectUrl>https://github.com/robertkjr3d/Time-Tracker</PackageProjectUrl>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>

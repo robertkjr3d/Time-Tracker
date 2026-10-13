@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Time_Tracker.Dialogs.ParentCategoryNameWindow"
+        Width="420"
+        Height="190"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Parent/Category">
+    <Grid RowDefinitions="Auto,Auto,Auto" Margin="16">
+        <TextBlock x:Name="PromptTextBlock"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   Text="Enter a parent/category name." />
+
+        <TextBox x:Name="NameTextBox"
+                 Grid.Row="1"
+                 Margin="0,14,0,0"
+                 Watermark="Parent/category name"
+                 KeyDown="NameTextBox_KeyDown" />
+
+        <StackPanel Grid.Row="2"
+                    Margin="0,16,0,0"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8">
+            <Button Content="Cancel" Click="Cancel_Click" />
+            <Button x:Name="ConfirmButton" Content="Save" Classes="accent" Click="Confirm_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

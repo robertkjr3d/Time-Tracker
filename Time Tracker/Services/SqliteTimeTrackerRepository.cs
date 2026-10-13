@@ -161,6 +161,61 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
         return Convert.ToInt64(result, CultureInfo.InvariantCulture);
     }
 
+    public async Task RenameParentCategoryAsync(long parentCategoryId, string name)
+    {
+        await InitializeAsync();
+
+        const string sql = """
+            UPDATE ParentCategories
+            SET Name = $name
+            WHERE Id = $parentCategoryId;
+            """;
+
+        await using var connection = await OpenConnectionAsync();
+        var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$parentCategoryId", parentCategoryId);
+        command.Parameters.AddWithValue("$name", name.Trim());
+        await command.ExecuteNonQueryAsync();
+    }
+
+    public async Task DeleteParentCategoryAsync(long parentCategoryId)
+    {
+        await InitializeAsync();
+
+        await using var connection = await OpenConnectionAsync();
+
+        var countCommand = connection.CreateCommand();
+        countCommand.CommandText = "SELECT COUNT(*) FROM ParentCategories;";
+        var parentCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
+        if (parentCount <= 1)
+        {
+            throw new InvalidOperationException("At least one parent/category must remain.");
+        }
+
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync();
+
+        var deleteActivitiesCommand = connection.CreateCommand();
+        deleteActivitiesCommand.Transaction = transaction;
+        deleteActivitiesCommand.CommandText = """
+            DELETE FROM Activities
+            WHERE ParentCategoryId = $parentCategoryId;
+            """;
+        deleteActivitiesCommand.Parameters.AddWithValue("$parentCategoryId", parentCategoryId);
+        await deleteActivitiesCommand.ExecuteNonQueryAsync();
+
+        var deleteParentCommand = connection.CreateCommand();
+        deleteParentCommand.Transaction = transaction;
+        deleteParentCommand.CommandText = """
+            DELETE FROM ParentCategories
+            WHERE Id = $parentCategoryId;
+            """;
+        deleteParentCommand.Parameters.AddWithValue("$parentCategoryId", parentCategoryId);
+        await deleteParentCommand.ExecuteNonQueryAsync();
+
+        await transaction.CommitAsync();
+    }
+
     public async Task<IReadOnlyList<ActivityRecord>> GetActivitiesAsync(long? parentCategoryId)
     {
         await InitializeAsync();
@@ -332,6 +387,22 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
         await command.ExecuteNonQueryAsync();
     }
 
+    public async Task DeleteActivityAsync(long activityId)
+    {
+        await InitializeAsync();
+
+        const string sql = """
+            DELETE FROM Activities
+            WHERE Id = $activityId;
+            """;
+
+        await using var connection = await OpenConnectionAsync();
+        var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$activityId", activityId);
+        await command.ExecuteNonQueryAsync();
+    }
+
     public async Task UpdateTimeEntryAsync(EditSessionModel model)
     {
         await InitializeAsync();
@@ -485,6 +556,11 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
     {
         var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
+
+        var pragmaCommand = connection.CreateCommand();
+        pragmaCommand.CommandText = "PRAGMA foreign_keys = ON;";
+        await pragmaCommand.ExecuteNonQueryAsync();
+
         return connection;
     }
 

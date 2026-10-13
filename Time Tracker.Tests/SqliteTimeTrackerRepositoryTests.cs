@@ -44,6 +44,37 @@ public class SqliteTimeTrackerRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteParentCategoryAsync_WhenOnlyOneParentExists_Throws()
+    {
+        var repository = CreateRepository();
+        await repository.InitializeAsync();
+        var parent = Assert.Single(await repository.GetParentCategoriesAsync());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => repository.DeleteParentCategoryAsync(parent.Id));
+
+        Assert.Equal("At least one parent/category must remain.", exception.Message);
+    }
+
+    [Fact]
+    public async Task DeleteParentCategoryAsync_RemovesActivitiesAndTimeEntries()
+    {
+        var repository = CreateRepository();
+        await repository.InitializeAsync();
+        var projectParentId = await repository.CreateParentCategoryAsync("Project");
+        await repository.CreateParentCategoryAsync("Archive");
+        var createdAt = new DateTime(2024, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+        var activityId = await repository.CreateActivityAsync("Draft report", projectParentId, createdAt);
+        await repository.StartActivityAsync(activityId, createdAt.AddMinutes(15));
+
+        await repository.DeleteParentCategoryAsync(projectParentId);
+
+        var parents = await repository.GetParentCategoriesAsync();
+        Assert.DoesNotContain(parents, x => x.Id == projectParentId);
+        Assert.Empty(await repository.GetActivitiesAsync(projectParentId));
+        Assert.Empty(await repository.GetTimeEntriesAsync(activityId));
+    }
+
+    [Fact]
     public async Task ExistingDatabaseWithoutParentColumn_IsMigratedToDefaultParent()
     {
         var databasePath = Path.Combine(_testDirectory, "migration.db");

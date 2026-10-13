@@ -46,8 +46,11 @@ public class MainViewModel : ViewModelBase
         _notificationTimer.Tick += (_, _) => ClearStatus();
 
         AddParentCategoryCommand = new AsyncRelayCommand(AddParentCategoryAsync);
+        RenameParentCategoryCommand = new AsyncRelayCommand(RenameSelectedParentCategoryAsync, CanRenameSelectedParentCategory);
+        DeleteParentCategoryCommand = new AsyncRelayCommand(DeleteSelectedParentCategoryAsync, CanDeleteSelectedParentCategory);
         CreateActivityCommand = new AsyncRelayCommand(CreateActivityAsync);
         RenameActivityCommand = new AsyncRelayCommand(RenameSelectedActivityAsync, CanRenameSelectedActivity);
+        DeleteActivityCommand = new AsyncRelayCommand(DeleteSelectedActivityAsync, CanDeleteSelectedActivity);
         StartActivityCommand = new AsyncRelayCommand(StartSelectedActivityAsync, CanStartSelectedActivity);
         StopActivityCommand = new AsyncRelayCommand(StopSelectedActivityAsync, CanStopSelectedActivity);
         RefreshCommand = new AsyncRelayCommand(RefreshAllAsync);
@@ -62,9 +65,15 @@ public class MainViewModel : ViewModelBase
 
     public IAsyncRelayCommand AddParentCategoryCommand { get; }
 
+    public IAsyncRelayCommand RenameParentCategoryCommand { get; }
+
+    public IAsyncRelayCommand DeleteParentCategoryCommand { get; }
+
     public IAsyncRelayCommand CreateActivityCommand { get; }
 
     public IAsyncRelayCommand RenameActivityCommand { get; }
+
+    public IAsyncRelayCommand DeleteActivityCommand { get; }
 
     public IAsyncRelayCommand StartActivityCommand { get; }
 
@@ -77,7 +86,13 @@ public class MainViewModel : ViewModelBase
     public string NewParentCategoryName
     {
         get => _newParentCategoryName;
-        set => SetProperty(ref _newParentCategoryName, value);
+        set
+        {
+            if (SetProperty(ref _newParentCategoryName, value))
+            {
+                RenameParentCategoryCommand.NotifyCanExecuteChanged();
+            }
+        }
     }
 
     public ParentCategoryRecord? SelectedParentCategory
@@ -87,6 +102,8 @@ public class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedParentCategory, value))
             {
+                RenameParentCategoryCommand.NotifyCanExecuteChanged();
+                DeleteParentCategoryCommand.NotifyCanExecuteChanged();
                 _ = LoadAsync();
             }
         }
@@ -118,6 +135,8 @@ public class MainViewModel : ViewModelBase
             if (SetProperty(ref _selectedActivity, value))
             {
                 SelectedActivityName = value?.Name ?? string.Empty;
+                RenameActivityCommand.NotifyCanExecuteChanged();
+                DeleteActivityCommand.NotifyCanExecuteChanged();
                 StartActivityCommand.NotifyCanExecuteChanged();
                 StopActivityCommand.NotifyCanExecuteChanged();
                 _ = LoadTimeEntriesForSelectionAsync();
@@ -203,6 +222,11 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    public bool CanDeleteSelectedParentCategoryNow()
+    {
+        return CanDeleteSelectedParentCategory();
+    }
+
     private void ClearStatus()
     {
         _notificationTimer.Stop();
@@ -230,6 +254,8 @@ public class MainViewModel : ViewModelBase
         SelectedParentCategory = previousSelectedId is null
             ? ParentCategories.FirstOrDefault()
             : ParentCategories.FirstOrDefault(parent => parent.Id == previousSelectedId) ?? ParentCategories.FirstOrDefault();
+
+        DeleteParentCategoryCommand.NotifyCanExecuteChanged();
     }
 
     private async Task LoadAsync(long? selectedActivityId = null)
@@ -240,6 +266,7 @@ public class MainViewModel : ViewModelBase
             TimeEntries.Clear();
             SelectedActivity = null;
             SelectedTimeEntry = null;
+            DeleteActivityCommand.NotifyCanExecuteChanged();
             return;
         }
 
@@ -263,6 +290,8 @@ public class MainViewModel : ViewModelBase
             TimeEntries.Clear();
             SelectedTimeEntry = null;
         }
+
+        DeleteActivityCommand.NotifyCanExecuteChanged();
     }
 
     private async Task LoadTimeEntriesForSelectionAsync()
@@ -299,9 +328,58 @@ public class MainViewModel : ViewModelBase
 
         var parentName = NewParentCategoryName.Trim();
         var parentId = await _repository.CreateParentCategoryAsync(parentName);
-        NewParentCategoryName = string.Empty;
         await LoadParentCategoriesAsync(parentId);
+        NewParentCategoryName = string.Empty;
         ShowStatus($"Parent '{parentName}' is ready.");
+    }
+
+    private bool CanRenameSelectedParentCategory()
+    {
+        return SelectedParentCategory is not null
+            && !string.IsNullOrWhiteSpace(NewParentCategoryName)
+            && !string.Equals(NewParentCategoryName.Trim(), SelectedParentCategory.Name, StringComparison.Ordinal);
+    }
+
+    private async Task RenameSelectedParentCategoryAsync()
+    {
+        if (SelectedParentCategory is null)
+        {
+            return;
+        }
+
+        var parentId = SelectedParentCategory.Id;
+        var parentName = NewParentCategoryName.Trim();
+        await _repository.RenameParentCategoryAsync(parentId, parentName);
+        await LoadParentCategoriesAsync(parentId);
+        NewParentCategoryName = string.Empty;
+        ShowStatus($"Parent renamed to '{parentName}'.");
+    }
+
+    private bool CanDeleteSelectedParentCategory()
+    {
+        return SelectedParentCategory is not null && ParentCategories.Count > 1;
+    }
+
+    private async Task DeleteSelectedParentCategoryAsync()
+    {
+        if (SelectedParentCategory is null)
+        {
+            return;
+        }
+
+        var parentName = SelectedParentCategory.Name;
+
+        try
+        {
+            await _repository.DeleteParentCategoryAsync(SelectedParentCategory.Id);
+            await LoadParentCategoriesAsync();
+            await LoadAsync();
+            ShowStatus($"Parent '{parentName}' deleted.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            ShowStatus(ex.Message);
+        }
     }
 
     private async Task CreateActivityAsync()
@@ -352,6 +430,24 @@ public class MainViewModel : ViewModelBase
         await _repository.RenameActivityAsync(SelectedActivity.Id, SelectedActivityName);
         ShowStatus("Activity renamed.");
         await LoadAsync(SelectedActivity.Id);
+    }
+
+    private bool CanDeleteSelectedActivity()
+    {
+        return SelectedActivity is not null;
+    }
+
+    private async Task DeleteSelectedActivityAsync()
+    {
+        if (SelectedActivity is null)
+        {
+            return;
+        }
+
+        var deletedName = SelectedActivity.Name;
+        await _repository.DeleteActivityAsync(SelectedActivity.Id);
+        ShowStatus($"Deleted activity '{deletedName}'.");
+        await LoadAsync();
     }
 
     private bool CanStartSelectedActivity()
@@ -420,7 +516,10 @@ public class MainViewModel : ViewModelBase
             entry.Refresh(nowUtc);
         }
 
+        RenameParentCategoryCommand.NotifyCanExecuteChanged();
+        DeleteParentCategoryCommand.NotifyCanExecuteChanged();
         RenameActivityCommand.NotifyCanExecuteChanged();
+        DeleteActivityCommand.NotifyCanExecuteChanged();
         StartActivityCommand.NotifyCanExecuteChanged();
         StopActivityCommand.NotifyCanExecuteChanged();
     }

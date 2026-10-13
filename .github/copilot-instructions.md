@@ -7,3 +7,10 @@
 - The activity-entry and parent-selection area must look active and colorful rather than gray or disabled-looking.
 - The user prefers a restrained, professional button color palette and wants the button colors updated to reflect this preference, avoiding bright multi-colored toolbar buttons.
 - The activity textbox must span the available width of the header area for a cleaner aligned layout. The user has noted that this width change has not yet been applied; layout adjustments should be made before confirming completion.
+- The user prefers a stopwatch-style application icon for the Time Tracker app.
+- The user prefers explicit clarification when a configuration line already exists, rather than implying it still needs to be added.
+
+## Delete Actions
+- The user wants delete actions to be safer: keep routine delete accessible on the main screen, but require a stronger confirmation challenge for destructive parent/category-level actions.
+- The default General category should be renameable.
+- The app must never allow deleting all parents/categories.

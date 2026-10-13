@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Time_Tracker.Services;
@@ -16,6 +17,12 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (Design.IsDesignMode)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var repository = new SqliteTimeTrackerRepository();

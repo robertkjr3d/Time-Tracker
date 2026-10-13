@@ -2,6 +2,7 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Time_Tracker.Dialogs;
@@ -22,18 +23,44 @@ public partial class MainWindow : Window
         DataContext = viewModel;
     }
 
-    private async void NewParentCategory_KeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-        {
-            await ExecuteAddParentCategoryAsync();
-            e.Handled = true;
-        }
-    }
-
     private async void AddParentCategory_Click(object? sender, RoutedEventArgs e)
     {
         await ExecuteAddParentCategoryAsync();
+    }
+
+    private async void RenameParentCategory_Click(object? sender, RoutedEventArgs e)
+    {
+        await ExecuteRenameParentCategoryAsync();
+    }
+
+    private async void DeleteParentCategory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedParentCategory is null)
+        {
+            viewModel.ShowStatus("Select a parent/category first.");
+            return;
+        }
+
+        if (!viewModel.CanDeleteSelectedParentCategoryNow())
+        {
+            viewModel.ShowStatus("At least one parent/category must remain.");
+            return;
+        }
+
+        var parentName = viewModel.SelectedParentCategory.Name;
+        var confirmed = await ConfirmParentDeleteAsync(parentName);
+        if (!confirmed)
+        {
+            viewModel.ShowStatus("Parent/category delete canceled.");
+            return;
+        }
+
+        await viewModel.DeleteParentCategoryCommand.ExecuteAsync(null);
     }
 
     private async Task ExecuteAddParentCategoryAsync()
@@ -43,9 +70,57 @@ public partial class MainWindow : Window
             return;
         }
 
-        viewModel.NewParentCategoryName = NewParentCategoryTextBox.Text ?? string.Empty;
+        var parentName = await ShowParentCategoryNameDialogAsync(
+            title: "New Parent/Category",
+            prompt: "Enter a name for the new parent/category.",
+            confirmText: "Create");
+
+        if (parentName is null)
+        {
+            return;
+        }
+
+        viewModel.NewParentCategoryName = parentName;
         await viewModel.AddParentCategoryCommand.ExecuteAsync(null);
-        NewParentCategoryTextBox.Focus();
+    }
+
+    private async Task ExecuteRenameParentCategoryAsync()
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedParentCategory is null)
+        {
+            viewModel.ShowStatus("Select a parent/category first.");
+            return;
+        }
+
+        var parentName = await ShowParentCategoryNameDialogAsync(
+            title: "Rename Parent/Category",
+            prompt: "Enter a new name for the selected parent/category.",
+            confirmText: "Rename",
+            initialValue: viewModel.SelectedParentCategory.Name);
+
+        if (parentName is null)
+        {
+            return;
+        }
+
+        viewModel.NewParentCategoryName = parentName;
+        if (string.IsNullOrWhiteSpace(parentName))
+        {
+            viewModel.ShowStatus("Enter a parent/category name.");
+            return;
+        }
+
+        if (string.Equals(parentName, viewModel.SelectedParentCategory.Name, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await viewModel.RenameParentCategoryCommand.ExecuteAsync(null);
     }
 
     private async void NewActivityName_KeyDown(object? sender, KeyEventArgs e)
@@ -60,6 +135,22 @@ public partial class MainWindow : Window
     private async void CreateActivity_Click(object? sender, RoutedEventArgs e)
     {
         await ExecuteCreateActivityAsync();
+    }
+
+    private async void DeleteActivity_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedActivity is null)
+        {
+            viewModel.ShowStatus("Select an activity first.");
+            return;
+        }
+
+        await viewModel.DeleteActivityCommand.ExecuteAsync(null);
     }
 
     private async Task ExecuteCreateActivityAsync()
@@ -128,5 +219,26 @@ public partial class MainWindow : Window
     private async void About_Click(object? sender, RoutedEventArgs e)
     {
         await new AboutWindow().ShowDialog(this);
+    }
+
+    private async Task<string?> ShowParentCategoryNameDialogAsync(string title, string prompt, string confirmText, string initialValue = "")
+    {
+        var dialog = new ParentCategoryNameWindow(title, prompt, confirmText, initialValue)
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var confirmed = await dialog.ShowDialog<bool>(this);
+        return confirmed ? dialog.EnteredName : null;
+    }
+
+    private async Task<bool> ConfirmParentDeleteAsync(string parentName)
+    {
+        var dialog = new ConfirmDeleteWindow(parentName)
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        return await dialog.ShowDialog<bool>(this);
     }
 }

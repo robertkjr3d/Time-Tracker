@@ -46,6 +46,38 @@ internal sealed class FakeTimeTrackerRepository : ITimeTrackerRepository
         return Task.FromResult(record.Id);
     }
 
+    public Task RenameParentCategoryAsync(long parentCategoryId, string name)
+    {
+        var parent = _parentCategories.Single(x => x.Id == parentCategoryId);
+        var trimmedName = name.Trim();
+        parent.Name = trimmedName;
+
+        foreach (var activity in _activities.Where(x => x.ParentCategoryId == parentCategoryId))
+        {
+            activity.ParentCategoryName = trimmedName;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteParentCategoryAsync(long parentCategoryId)
+    {
+        if (_parentCategories.Count <= 1)
+        {
+            throw new InvalidOperationException("At least one parent/category must remain.");
+        }
+
+        _parentCategories.RemoveAll(x => x.Id == parentCategoryId);
+        var activityIds = _activities.Where(x => x.ParentCategoryId == parentCategoryId).Select(x => x.Id).ToList();
+        _activities.RemoveAll(x => x.ParentCategoryId == parentCategoryId);
+        foreach (var activityId in activityIds)
+        {
+            _timeEntries.Remove(activityId);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<ActivityRecord>> GetActivitiesAsync(long? parentCategoryId)
     {
         var results = _activities
@@ -115,6 +147,13 @@ internal sealed class FakeTimeTrackerRepository : ITimeTrackerRepository
     public Task RenameActivityAsync(long activityId, string name)
     {
         _activities.Single(x => x.Id == activityId).Name = name.Trim();
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteActivityAsync(long activityId)
+    {
+        _activities.RemoveAll(x => x.Id == activityId);
+        _timeEntries.Remove(activityId);
         return Task.CompletedTask;
     }
 

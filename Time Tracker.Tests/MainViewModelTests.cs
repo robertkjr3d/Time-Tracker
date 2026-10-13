@@ -25,18 +25,36 @@ public class MainViewModelTests
     {
         var repository = new FakeTimeTrackerRepository();
         await repository.CreateParentCategoryAsync("General");
-        var viewModel = new MainViewModel(repository)
-        {
-            NewParentCategoryName = "Client A",
-        };
+        var viewModel = new MainViewModel(repository);
 
         await viewModel.InitializeAsync();
+        viewModel.NewParentCategoryName = "Client A";
         await viewModel.AddParentCategoryCommand.ExecuteAsync(null);
 
         Assert.Contains(viewModel.ParentCategories, x => x.Name == "Client A");
         Assert.Equal("Client A", viewModel.SelectedParentCategory?.Name);
+        Assert.Equal(string.Empty, viewModel.NewParentCategoryName);
         Assert.True(viewModel.IsStatusVisible);
         Assert.Equal("Parent 'Client A' is ready.", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task RenameParentCategoryCommand_RenamesSelectedParent()
+    {
+        var repository = new FakeTimeTrackerRepository();
+        var parentId = await repository.CreateParentCategoryAsync("Client A");
+        var viewModel = new MainViewModel(repository);
+
+        await viewModel.InitializeAsync();
+        viewModel.SelectedParentCategory = viewModel.ParentCategories.Single(x => x.Id == parentId);
+        viewModel.NewParentCategoryName = "Client B";
+
+        await viewModel.RenameParentCategoryCommand.ExecuteAsync(null);
+
+        Assert.Equal("Client B", viewModel.SelectedParentCategory?.Name);
+        Assert.Contains(viewModel.ParentCategories, x => x.Name == "Client B");
+        Assert.Equal(string.Empty, viewModel.NewParentCategoryName);
+        Assert.Equal("Parent renamed to 'Client B'.", viewModel.StatusMessage);
     }
 
     [Fact]

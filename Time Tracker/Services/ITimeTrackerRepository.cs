@@ -13,6 +13,10 @@ public interface ITimeTrackerRepository
 
     Task<long> CreateParentCategoryAsync(string name);
 
+    Task RenameParentCategoryAsync(long parentCategoryId, string name);
+
+    Task DeleteParentCategoryAsync(long parentCategoryId);
+
     Task<IReadOnlyList<ActivityRecord>> GetActivitiesAsync(long? parentCategoryId);
 
     Task<IReadOnlyList<TimeEntryRecord>> GetTimeEntriesAsync(long activityId);
@@ -24,6 +28,8 @@ public interface ITimeTrackerRepository
     Task StopActivityAsync(long activityId, DateTime stoppedAtUtc);
 
     Task RenameActivityAsync(long activityId, string name);
+
+    Task DeleteActivityAsync(long activityId);
 
     Task UpdateTimeEntryAsync(EditSessionModel model);
 

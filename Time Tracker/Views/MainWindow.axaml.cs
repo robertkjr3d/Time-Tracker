@@ -2,8 +2,11 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Linq;
 using System.Threading.Tasks;
 using Time_Tracker.Dialogs;
 using Time_Tracker.ViewModels;
@@ -12,15 +15,19 @@ namespace Time_Tracker.Views;
 
 public partial class MainWindow : Window
 {
+    private MainViewModel? _viewModel;
+
     public MainWindow()
     {
         InitializeComponent();
+        Opened += MainWindow_Opened;
     }
 
     public MainWindow(MainViewModel viewModel)
         : this()
     {
         DataContext = viewModel;
+        AttachViewModel(viewModel);
     }
 
     private async void AddParentCategory_Click(object? sender, RoutedEventArgs e)
@@ -144,13 +151,33 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.SelectedActivity is null)
+        var selectedActivities = ActivitiesDataGrid.SelectedItems?
+            .OfType<ActivityItemViewModel>()
+            .DistinctBy(activity => activity.Id)
+            .ToList() ?? new List<ActivityItemViewModel>();
+
+        if (selectedActivities.Count == 0 && viewModel.SelectedActivity is not null)
+        {
+            selectedActivities.Add(viewModel.SelectedActivity);
+        }
+
+        if (selectedActivities.Count == 0)
         {
             viewModel.ShowStatus("Select an activity first.");
             return;
         }
 
-        await viewModel.DeleteActivityCommand.ExecuteAsync(null);
+        if (selectedActivities.Count > 1)
+        {
+            var confirmed = await ConfirmActivityDeleteAsync(selectedActivities.Count);
+            if (!confirmed)
+            {
+                viewModel.ShowStatus("Activity delete canceled.");
+                return;
+            }
+        }
+
+        await viewModel.DeleteActivitiesAsync(selectedActivities);
     }
 
     private async Task ExecuteCreateActivityAsync()
@@ -178,13 +205,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        var window = new ActivityHistoryWindow
+        var model = viewModel.CreateEditModelForSelectedEntry();
+        if (model is null)
         {
-            DataContext = viewModel,
-            Title = $"History - {viewModel.SelectedActivity.Name}",
+            viewModel.ShowStatus("No time entry available to edit for this activity.");
+            return;
+        }
+
+        var dialog = new EditSessionWindow
+        {
+            DataContext = new EditSessionDialogViewModel(model),
         };
 
-        await window.ShowDialog(this);
+        var saved = await dialog.ShowDialog<bool>(this);
+        if (saved && dialog.Result is not null)
+        {
+            await viewModel.ApplyEditAsync(dialog.Result);
+        }
     }
 
     private async void ExportCsv_Click(object? sender, RoutedEventArgs e)
@@ -192,6 +229,24 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
         {
             return;
+        }
+
+        var exportThisJobOnly = await ShowExportScopeDialogAsync();
+        if (exportThisJobOnly is null)
+        {
+            return;
+        }
+
+        long? parentCategoryId = null;
+        if (exportThisJobOnly.Value)
+        {
+            if (viewModel.SelectedParentCategory is null)
+            {
+                viewModel.ShowStatus("Select a job first.");
+                return;
+            }
+
+            parentCategoryId = viewModel.SelectedParentCategory.Id;
         }
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -213,12 +268,56 @@ public partial class MainWindow : Window
             return;
         }
 
-        await viewModel.ExportCsvAsync(file.Path.LocalPath);
+        await viewModel.ExportCsvAsync(file.Path.LocalPath, parentCategoryId);
     }
 
     private async void About_Click(object? sender, RoutedEventArgs e)
     {
         await new AboutWindow().ShowDialog(this);
+    }
+
+    private void AttachViewModel(MainViewModel viewModel)
+    {
+        if (ReferenceEquals(_viewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_viewModel is not null)
+        {
+            _viewModel.Activities.CollectionChanged -= Activities_CollectionChanged;
+        }
+
+        _viewModel = viewModel;
+        _viewModel.Activities.CollectionChanged += Activities_CollectionChanged;
+    }
+
+    private void MainWindow_Opened(object? sender, EventArgs e)
+    {
+        ScrollActivitiesToBottom();
+    }
+
+    private void Activities_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ScrollActivitiesToBottom();
+    }
+
+    private void ScrollActivitiesToBottom()
+    {
+        if (_viewModel is null || _viewModel.Activities.Count == 0)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_viewModel.Activities.Count == 0)
+            {
+                return;
+            }
+
+            ActivitiesDataGrid.ScrollIntoView(_viewModel.Activities[^1], null);
+        }, DispatcherPriority.Background);
     }
 
     private async Task<string?> ShowParentCategoryNameDialogAsync(string title, string prompt, string confirmText, string initialValue = "")
@@ -230,6 +329,32 @@ public partial class MainWindow : Window
 
         var confirmed = await dialog.ShowDialog<bool>(this);
         return confirmed ? dialog.EnteredName : null;
+    }
+
+    private async Task<bool?> ShowExportScopeDialogAsync()
+    {
+        var dialog = new ExportScopeWindow
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var confirmed = await dialog.ShowDialog<bool>(this);
+        return confirmed ? dialog.ExportThisJobOnly : null;
+    }
+
+    private async Task<bool> ConfirmActivityDeleteAsync(int activityCount)
+    {
+        var dialog = new ConfirmDeleteWindow(
+            title: "Delete selected activities?",
+            heading: "Delete selected activities?",
+            message: "This will permanently delete all selected activities and their time entries.",
+            targetText: $"Selected activities: {activityCount}",
+            confirmText: "Yes, delete")
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        return await dialog.ShowDialog<bool>(this);
     }
 
     private async Task<bool> ConfirmParentDeleteAsync(string parentName)

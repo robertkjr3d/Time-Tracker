@@ -226,7 +226,7 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
                 a.ParentCategoryId,
                 p.Name,
                 a.Name,
-                a.CreatedAtUtc,
+                COALESCE(MIN(t.StartUtc), a.CreatedAtUtc) AS DisplayCreatedAtUtc,
                 SUM(CASE
                     WHEN t.EndUtc IS NOT NULL THEN unixepoch(t.EndUtc) - unixepoch(t.StartUtc)
                     ELSE 0
@@ -237,7 +237,7 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
             LEFT JOIN TimeEntries t ON t.ActivityId = a.Id
             WHERE $parentCategoryId IS NULL OR a.ParentCategoryId = $parentCategoryId
             GROUP BY a.Id, a.ParentCategoryId, p.Name, a.Name, a.CreatedAtUtc
-            ORDER BY a.CreatedAtUtc DESC;
+            ORDER BY DisplayCreatedAtUtc ASC, a.Id ASC;
             """;
 
         var records = new List<ActivityRecord>();
@@ -460,7 +460,7 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync()
+    public async Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync(long? parentCategoryId = null)
     {
         await InitializeAsync();
 
@@ -468,14 +468,15 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
             SELECT
                 p.Name,
                 a.Name,
-                a.CreatedAtUtc,
+                COALESCE((SELECT MIN(t2.StartUtc) FROM TimeEntries t2 WHERE t2.ActivityId = a.Id), a.CreatedAtUtc) AS DisplayCreatedAtUtc,
                 t.StartUtc,
                 t.EndUtc,
                 t.Notes
             FROM Activities a
             INNER JOIN ParentCategories p ON p.Id = a.ParentCategoryId
             INNER JOIN TimeEntries t ON t.ActivityId = a.Id
-            ORDER BY p.Name, a.Name, t.StartUtc;
+            WHERE $parentCategoryId IS NULL OR a.ParentCategoryId = $parentCategoryId
+            ORDER BY DisplayCreatedAtUtc ASC, t.StartUtc ASC, a.Id ASC, t.Id ASC;
             """;
 
         var rows = new List<ActivityExportRow>();
@@ -483,6 +484,7 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
         await using var connection = await OpenConnectionAsync();
         var command = connection.CreateCommand();
         command.CommandText = sql;
+        command.Parameters.AddWithValue("$parentCategoryId", parentCategoryId is null ? DBNull.Value : parentCategoryId.Value);
 
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -532,24 +534,30 @@ public class SqliteTimeTrackerRepository : ITimeTrackerRepository
 
     private static async Task<long> EnsureDefaultParentCategoryAsync(SqliteConnection connection)
     {
-        var insertCommand = connection.CreateCommand();
-        insertCommand.CommandText = """
-            INSERT OR IGNORE INTO ParentCategories (Name)
-            VALUES ($name);
-            """;
-        insertCommand.Parameters.AddWithValue("$name", DefaultParentCategoryName);
-        await insertCommand.ExecuteNonQueryAsync();
-
-        var selectCommand = connection.CreateCommand();
-        selectCommand.CommandText = """
+        var existingCommand = connection.CreateCommand();
+        existingCommand.CommandText = """
             SELECT Id
             FROM ParentCategories
-            WHERE Name = $name COLLATE NOCASE;
+            ORDER BY Id
+            LIMIT 1;
             """;
-        selectCommand.Parameters.AddWithValue("$name", DefaultParentCategoryName);
 
-        var result = await selectCommand.ExecuteScalarAsync();
-        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        var existingResult = await existingCommand.ExecuteScalarAsync();
+        if (existingResult is not null && existingResult != DBNull.Value)
+        {
+            return Convert.ToInt64(existingResult, CultureInfo.InvariantCulture);
+        }
+
+        var insertCommand = connection.CreateCommand();
+        insertCommand.CommandText = """
+            INSERT INTO ParentCategories (Name)
+            VALUES ($name);
+            SELECT last_insert_rowid();
+            """;
+        insertCommand.Parameters.AddWithValue("$name", DefaultParentCategoryName);
+
+        var insertedResult = await insertCommand.ExecuteScalarAsync();
+        return Convert.ToInt64(insertedResult, CultureInfo.InvariantCulture);
     }
 
     private async Task<SqliteConnection> OpenConnectionAsync()

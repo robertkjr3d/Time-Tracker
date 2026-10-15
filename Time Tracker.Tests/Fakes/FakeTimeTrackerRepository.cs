@@ -82,7 +82,25 @@ internal sealed class FakeTimeTrackerRepository : ITimeTrackerRepository
     {
         var results = _activities
             .Where(x => parentCategoryId is null || x.ParentCategoryId == parentCategoryId.Value)
-            .OrderByDescending(x => x.CreatedAtUtc)
+            .OrderBy(x => _timeEntries.TryGetValue(x.Id, out var entries) && entries.Count > 0 ? entries.Min(entry => entry.StartUtc) : x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .Select(x =>
+            {
+                var displayCreatedAtUtc = _timeEntries.TryGetValue(x.Id, out var entries) && entries.Count > 0
+                    ? entries.Min(entry => entry.StartUtc)
+                    : x.CreatedAtUtc;
+                return new ActivityRecord
+                {
+                    Id = x.Id,
+                    ParentCategoryId = x.ParentCategoryId,
+                    ParentCategoryName = x.ParentCategoryName,
+                    Name = x.Name,
+                    CreatedAtUtc = displayCreatedAtUtc,
+                    IsRunning = x.IsRunning,
+                    CurrentSessionStartUtc = x.CurrentSessionStartUtc,
+                    AccumulatedDuration = x.AccumulatedDuration,
+                };
+            })
             .ToList();
         return Task.FromResult<IReadOnlyList<ActivityRecord>>(results);
     }
@@ -186,27 +204,35 @@ internal sealed class FakeTimeTrackerRepository : ITimeTrackerRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync()
+    public Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync(long? parentCategoryId = null)
     {
         var rows = new List<ActivityExportRow>();
-        foreach (var activity in _activities)
+        foreach (var activity in _activities
+                     .Where(x => parentCategoryId is null || x.ParentCategoryId == parentCategoryId.Value)
+                     .OrderBy(x => x.CreatedAtUtc)
+                     .ThenBy(x => x.Id))
         {
             if (!_timeEntries.TryGetValue(activity.Id, out var entries))
             {
                 continue;
             }
 
-            rows.AddRange(entries.Select(entry => new ActivityExportRow
-            {
-                ParentCategory = activity.ParentCategoryName,
-                Activity = activity.Name,
-                Status = entry.EndUtc is null ? "Running" : "Stopped",
-                CreatedAtLocal = activity.CreatedAtUtc.ToLocalTime(),
-                StartLocal = entry.StartUtc.ToLocalTime(),
-                EndLocal = entry.EndUtc?.ToLocalTime(),
-                Duration = (entry.EndUtc ?? DateTime.UtcNow) - entry.StartUtc,
-                Notes = entry.Notes,
-            }));
+            rows.AddRange(entries
+                .OrderBy(entry => entry.StartUtc)
+                .ThenBy(entry => entry.Id)
+                .Select(entry => new ActivityExportRow
+                {
+                    ParentCategory = activity.ParentCategoryName,
+                    Activity = activity.Name,
+                    Status = entry.EndUtc is null ? "Running" : "Stopped",
+                    CreatedAtLocal = (_timeEntries.TryGetValue(activity.Id, out var activityEntries) && activityEntries.Count > 0
+                        ? activityEntries.Min(x => x.StartUtc)
+                        : activity.CreatedAtUtc).ToLocalTime(),
+                    StartLocal = entry.StartUtc.ToLocalTime(),
+                    EndLocal = entry.EndUtc?.ToLocalTime(),
+                    Duration = (entry.EndUtc ?? DateTime.UtcNow) - entry.StartUtc,
+                    Notes = entry.Notes,
+                }));
         }
 
         return Task.FromResult<IReadOnlyList<ActivityExportRow>>(rows);

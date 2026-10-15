@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace Time_Tracker.ViewModels;
 public class MainViewModel : ViewModelBase
 {
     private readonly ITimeTrackerRepository _repository;
+    private readonly string _selectedJobStatePath;
     private readonly DispatcherTimer _refreshTimer;
     private readonly DispatcherTimer _notificationTimer;
     private string _newParentCategoryName = string.Empty;
@@ -25,9 +27,10 @@ public class MainViewModel : ViewModelBase
     private string _statusMessage = string.Empty;
     private bool _isStatusVisible;
 
-    public MainViewModel(ITimeTrackerRepository repository)
+    public MainViewModel(ITimeTrackerRepository repository, string? selectedJobStatePath = null)
     {
         _repository = repository;
+        _selectedJobStatePath = selectedJobStatePath ?? GetDefaultSelectedJobStatePath();
         ParentCategories = new ObservableCollection<ParentCategoryRecord>();
         Activities = new ObservableCollection<ActivityItemViewModel>();
         TimeEntries = new ObservableCollection<TimeEntryItemViewModel>();
@@ -102,6 +105,7 @@ public class MainViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedParentCategory, value))
             {
+                SaveSelectedParentCategoryId(value?.Id);
                 RenameParentCategoryCommand.NotifyCanExecuteChanged();
                 DeleteParentCategoryCommand.NotifyCanExecuteChanged();
                 _ = LoadAsync();
@@ -171,7 +175,7 @@ public class MainViewModel : ViewModelBase
     public async Task InitializeAsync()
     {
         await _repository.InitializeAsync();
-        await LoadParentCategoriesAsync();
+        await LoadParentCategoriesAsync(LoadSelectedParentCategoryId());
         await LoadAsync();
     }
 
@@ -187,9 +191,9 @@ public class MainViewModel : ViewModelBase
         await LoadAsync(model.ActivityId);
     }
 
-    public async Task ExportCsvAsync(string filePath)
+    public async Task ExportCsvAsync(string filePath, long? parentCategoryId = null)
     {
-        var rows = await _repository.GetExportRowsAsync();
+        var rows = await _repository.GetExportRowsAsync(parentCategoryId);
         var builder = new StringBuilder();
         builder.AppendLine("Parent,Activity,Status,Created,Start,End,Duration,Notes");
 
@@ -232,6 +236,56 @@ public class MainViewModel : ViewModelBase
         _notificationTimer.Stop();
         IsStatusVisible = false;
         StatusMessage = string.Empty;
+    }
+
+    private long? LoadSelectedParentCategoryId()
+    {
+        try
+        {
+            if (!File.Exists(_selectedJobStatePath))
+            {
+                return null;
+            }
+
+            var text = File.ReadAllText(_selectedJobStatePath).Trim();
+            return long.TryParse(text, out var selectedId) ? selectedId : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void SaveSelectedParentCategoryId(long? selectedParentCategoryId)
+    {
+        try
+        {
+            var directoryPath = Path.GetDirectoryName(_selectedJobStatePath);
+            if (!string.IsNullOrWhiteSpace(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            if (selectedParentCategoryId is null)
+            {
+                if (File.Exists(_selectedJobStatePath))
+                {
+                    File.Delete(_selectedJobStatePath);
+                }
+
+                return;
+            }
+
+            File.WriteAllText(_selectedJobStatePath, selectedParentCategoryId.Value.ToString());
+        }
+        catch
+        {
+        }
+    }
+
+    private static string GetDefaultSelectedJobStatePath()
+    {
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Time Tracker", "selected-job.txt");
     }
 
     private async Task RefreshAllAsync()
@@ -437,6 +491,35 @@ public class MainViewModel : ViewModelBase
         return SelectedActivity is not null;
     }
 
+    public async Task DeleteActivitiesAsync(IReadOnlyList<ActivityItemViewModel> activities)
+    {
+        var toDelete = activities
+            .GroupBy(activity => activity.Id)
+            .Select(group => group.First())
+            .ToList();
+
+        if (toDelete.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var activity in toDelete)
+        {
+            await _repository.DeleteActivityAsync(activity.Id);
+        }
+
+        if (toDelete.Count == 1)
+        {
+            ShowStatus($"Deleted activity '{toDelete[0].Name}'.");
+        }
+        else
+        {
+            ShowStatus($"Deleted {toDelete.Count} activities.");
+        }
+
+        await LoadAsync();
+    }
+
     private async Task DeleteSelectedActivityAsync()
     {
         if (SelectedActivity is null)
@@ -444,10 +527,7 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
-        var deletedName = SelectedActivity.Name;
-        await _repository.DeleteActivityAsync(SelectedActivity.Id);
-        ShowStatus($"Deleted activity '{deletedName}'.");
-        await LoadAsync();
+        await DeleteActivitiesAsync(new[] { SelectedActivity });
     }
 
     private bool CanStartSelectedActivity()

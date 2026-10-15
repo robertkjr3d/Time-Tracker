@@ -60,8 +60,8 @@
                         <Button Width="30" Height="28" Padding="0" Background="#7A3A3A" BorderBrush="#A05757" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="DeleteActivity_Click" ToolTip.Tip="Delete selected activity">
                             <TextBlock Foreground="White" FontSize="14" Text="×" />
                         </Button>
-                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="History_Click" ToolTip.Tip="Open selected activity history">
-                            <TextBlock Foreground="White" FontSize="15" Text="☰" />
+                        <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="History_Click" ToolTip.Tip="Edit selected activity entry">
+                            <TextBlock Foreground="White" FontSize="14" Text="✎" />
                         </Button>
                         <Button Width="30" Height="28" Padding="0" Background="#425C6E" BorderBrush="#5E7A8F" Foreground="White" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="ExportCsv_Click" ToolTip.Tip="Export all entries to CSV">
                             <TextBlock Foreground="White" FontSize="15" Text="⇩" />
@@ -84,8 +84,10 @@
         </Border>
 
         <Border Grid.Row="1" Margin="0,8,0,0" BorderBrush="#36424A" BorderThickness="1" CornerRadius="4">
-            <DataGrid ItemsSource="{Binding Activities}"
+            <DataGrid x:Name="ActivitiesDataGrid"
+                      ItemsSource="{Binding Activities}"
                       SelectedItem="{Binding SelectedActivity}"
+                      SelectionMode="Extended"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       CanUserSortColumns="True"

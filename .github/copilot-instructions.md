@@ -11,6 +11,6 @@
 - The user prefers explicit clarification when a configuration line already exists, rather than implying it still needs to be added.
 
 ## Delete Actions
-- The user wants delete actions to be safer: keep routine delete accessible on the main screen, but require a stronger confirmation challenge for destructive parent/category-level actions.
+- The user wants delete actions to be safer: keep routine delete accessible on the main screen, but require a normal yes/cancel confirmation for deleting a parent/category instead of a 'type DELETE' challenge for destructive parent/category-level actions.
 - The default General category should be renameable.
 - The app must never allow deleting all parents/categories.

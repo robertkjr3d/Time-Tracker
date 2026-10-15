@@ -8,27 +8,30 @@ public partial class ConfirmDeleteWindow : Window
     public ConfirmDeleteWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => ConfirmationTextBox.Focus();
     }
 
     public ConfirmDeleteWindow(string parentName)
+        : this(
+            title: "Delete this Job?",
+            heading: "Delete this Job?",
+            message: "This will permanently delete the selected job/category and every activity and time entry under it.",
+            targetText: $"Selected job/category: {parentName}")
+    {
+    }
+
+    public ConfirmDeleteWindow(string title, string heading, string message, string targetText, string confirmText = "Delete")
         : this()
     {
-        TargetNameTextBlock.Text = $"Selected parent/category: {parentName}";
+        Title = title;
+        this.FindControl<TextBlock>("HeadingTextBlock")!.Text = heading;
+        this.FindControl<TextBlock>("MessageTextBlock")!.Text = message;
+        this.FindControl<TextBlock>("TargetNameTextBlock")!.Text = targetText;
+        this.FindControl<Button>("ConfirmButton")!.Content = confirmText;
     }
 
     private void Delete_Click(object? sender, RoutedEventArgs e)
     {
-        var confirmation = ConfirmationTextBox.Text?.Trim();
-        if (string.Equals(confirmation, "DELETE", System.StringComparison.Ordinal))
-        {
-            Close(true);
-            return;
-        }
-
-        ConfirmationTextBox.Text = string.Empty;
-        TargetNameTextBlock.Text = "Type DELETE exactly to confirm this parent/category deletion.";
-        ConfirmationTextBox.Focus();
+        Close(true);
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs e)

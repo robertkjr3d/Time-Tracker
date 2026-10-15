@@ -1,1 +1,19 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Time_Tracker.Dialogs.ConfirmDeleteWindow" Width="480" Height="240" CanResize="False" Title="Delete Parent/Category"><Grid RowDefinitions="Auto,Auto,Auto,Auto" Margin="16"><TextBlock FontSize="18" FontWeight="Bold" Text="Delete parent/category" /><TextBlock Grid.Row="1" Margin="0,12,0,0" TextWrapping="Wrap" Text="This will permanently delete the selected parent/category and every activity and time entry under it." /><TextBlock Grid.Row="2" Margin="0,12,0,0" TextWrapping="Wrap" Text="Type DELETE to confirm." /><StackPanel Grid.Row="3" Margin="0,12,0,0" Spacing="10"><TextBox x:Name="ConfirmationTextBox" Watermark="Type DELETE" /><TextBlock x:Name="TargetNameTextBlock" Opacity="0.75" TextWrapping="Wrap" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Cancel" Click="Cancel_Click" /><Button Content="Delete" Classes="accent" Click="Delete_Click" /></StackPanel></StackPanel></Grid></Window>
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Time_Tracker.Dialogs.ConfirmDeleteWindow"
+        Width="480"
+        Height="220"
+        CanResize="False"
+        Title="Confirm Delete">
+    <Grid RowDefinitions="Auto,Auto,Auto" Margin="16">
+        <TextBlock x:Name="HeadingTextBlock" FontSize="18" FontWeight="Bold" Text="Delete item?" />
+        <TextBlock x:Name="MessageTextBlock" Grid.Row="1" Margin="0,12,0,0" TextWrapping="Wrap" Text="This action cannot be undone." />
+        <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="10">
+            <TextBlock x:Name="TargetNameTextBlock" Opacity="0.75" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Cancel" Click="Cancel_Click" />
+                <Button x:Name="ConfirmButton" Content="Delete" Classes="accent" Click="Delete_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

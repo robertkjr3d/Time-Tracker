@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using System.Threading.Tasks;
 using Time_Tracker.ViewModels;
 
 namespace Time_Tracker.Dialogs;
@@ -12,6 +14,16 @@ public partial class ActivityHistoryWindow : Window
     }
 
     private async void EditSelected_Click(object? sender, RoutedEventArgs e)
+    {
+        await EditSelectedEntryAsync();
+    }
+
+    private async void TimeEntries_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        await EditSelectedEntryAsync();
+    }
+
+    private async Task EditSelectedEntryAsync()
     {
         if (DataContext is not MainViewModel viewModel)
         {

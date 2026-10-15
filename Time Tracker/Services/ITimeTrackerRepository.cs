@@ -35,5 +35,5 @@ public interface ITimeTrackerRepository
 
     Task DeleteTimeEntryAsync(long timeEntryId);
 
-    Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync();
+    Task<IReadOnlyList<ActivityExportRow>> GetExportRowsAsync(long? parentCategoryId = null);
 }

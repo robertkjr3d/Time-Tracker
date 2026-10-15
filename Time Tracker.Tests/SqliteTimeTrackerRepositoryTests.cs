@@ -56,6 +56,25 @@ public class SqliteTimeTrackerRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetActivitiesAsync_ReturnsActivitiesOldestToNewest()
+    {
+        var repository = CreateRepository();
+        await repository.InitializeAsync();
+        var parentId = await repository.CreateParentCategoryAsync("Client A");
+        var later = new DateTime(2024, 1, 10, 11, 0, 0, DateTimeKind.Utc);
+        var earlier = new DateTime(2024, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+
+        await repository.CreateActivityAsync("Second", parentId, later);
+        await repository.CreateActivityAsync("First", parentId, earlier);
+
+        var activities = await repository.GetActivitiesAsync(parentId);
+
+        Assert.Collection(activities,
+            first => Assert.Equal("First", first.Name),
+            second => Assert.Equal("Second", second.Name));
+    }
+
+    [Fact]
     public async Task DeleteParentCategoryAsync_RemovesActivitiesAndTimeEntries()
     {
         var repository = CreateRepository();
@@ -90,6 +109,75 @@ public class SqliteTimeTrackerRepositoryTests : IDisposable
         Assert.Equal("General", parent.Name);
         Assert.Equal(parent.Id, activity.ParentCategoryId);
         Assert.Equal("Legacy Task", activity.Name);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_DoesNotRecreateGeneralAfterDefaultParentIsRenamed()
+    {
+        var databasePath = Path.Combine(_testDirectory, "renamed-default.db");
+        var repository = new SqliteTimeTrackerRepository(databasePath);
+
+        await repository.InitializeAsync();
+        var originalParent = Assert.Single(await repository.GetParentCategoriesAsync());
+        await repository.RenameParentCategoryAsync(originalParent.Id, "Main");
+
+        var restartedRepository = new SqliteTimeTrackerRepository(databasePath);
+        await restartedRepository.InitializeAsync();
+        var parents = await restartedRepository.GetParentCategoriesAsync();
+
+        var parent = Assert.Single(parents);
+        Assert.Equal("Main", parent.Name);
+    }
+
+    [Fact]
+    public async Task GetExportRowsAsync_OrdersRowsByActivityCreatedDate()
+    {
+        var repository = CreateRepository();
+        await repository.InitializeAsync();
+        var parentId = await repository.CreateParentCategoryAsync("Client A");
+        var laterCreated = new DateTime(2024, 1, 10, 11, 0, 0, DateTimeKind.Utc);
+        var earlierCreated = new DateTime(2024, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+
+        var laterActivityId = await repository.CreateActivityAsync("Second", parentId, laterCreated);
+        var earlierActivityId = await repository.CreateActivityAsync("First", parentId, earlierCreated);
+
+        await repository.StartActivityAsync(laterActivityId, laterCreated.AddMinutes(10));
+        await repository.StopActivityAsync(laterActivityId, laterCreated.AddMinutes(40));
+        await repository.StartActivityAsync(earlierActivityId, earlierCreated.AddMinutes(10));
+        await repository.StopActivityAsync(earlierActivityId, earlierCreated.AddMinutes(30));
+
+        var rows = await repository.GetExportRowsAsync(parentId);
+
+        Assert.Collection(rows,
+            first => Assert.Equal("First", first.Activity),
+            second => Assert.Equal("Second", second.Activity));
+    }
+
+    [Fact]
+    public async Task UpdateTimeEntryAsync_UpdatesDisplayedCreatedDateFromEditedStart()
+    {
+        var repository = CreateRepository();
+        await repository.InitializeAsync();
+        var parentId = await repository.CreateParentCategoryAsync("Client A");
+        var createdAt = new DateTime(2024, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+        var activityId = await repository.CreateActivityAsync("Task", parentId, createdAt);
+        var originalStart = createdAt.AddMinutes(30);
+        var updatedStart = createdAt.AddMinutes(-15);
+        var timeEntryId = await repository.StartActivityAsync(activityId, originalStart);
+        await repository.StopActivityAsync(activityId, originalStart.AddMinutes(10));
+
+        await repository.UpdateTimeEntryAsync(new Models.EditSessionModel
+        {
+            ActivityId = activityId,
+            TimeEntryId = timeEntryId,
+            ActivityName = "Task",
+            StartLocal = updatedStart.ToLocalTime(),
+            EndLocal = originalStart.AddMinutes(10).ToLocalTime(),
+            Notes = string.Empty,
+        });
+
+        var activity = Assert.Single(await repository.GetActivitiesAsync(parentId));
+        Assert.Equal(updatedStart, activity.CreatedAtUtc);
     }
 
     public void Dispose()

@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Opened += MainWindow_Opened;
+        ActivitiesDataGrid.AddHandler(InputElement.DoubleTappedEvent, ActivitiesDataGrid_DoubleTapped, RoutingStrategies.Bubble, true);
     }
 
     public MainWindow(MainViewModel viewModel)
@@ -193,6 +194,21 @@ public partial class MainWindow : Window
     }
 
     private async void History_Click(object? sender, RoutedEventArgs e)
+    {
+        await ExecuteEditSelectedActivityAsync();
+    }
+
+    private async void ActivitiesDataGrid_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is not Control sourceControl || sourceControl.DataContext is not ActivityItemViewModel)
+        {
+            return;
+        }
+
+        await ExecuteEditSelectedActivityAsync();
+    }
+
+    private async Task ExecuteEditSelectedActivityAsync()
     {
         if (DataContext is not MainViewModel viewModel)
         {

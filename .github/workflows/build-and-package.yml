@@ -1,0 +1,68 @@
+name: build-and-package
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-artifacts:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: linux-arm64
+            os: ubuntu-latest
+          - rid: osx-x64
+            os: macos-latest
+          - rid: osx-arm64
+            os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish ${{ matrix.rid }}
+        shell: pwsh
+        run: |
+          dotnet publish "Time Tracker/Time Tracker.csproj" -c Release -r ${{ matrix.rid }} -o "artifacts/publish/${{ matrix.rid }}"
+
+      - name: Upload artifact ${{ matrix.rid }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-tracker-${{ matrix.rid }}
+          path: artifacts/publish/${{ matrix.rid }}/
+
+  build-linux-deb:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build linux-x64 .deb package
+        run: |
+          chmod +x packaging/deb/build-deb.sh
+          bash packaging/deb/build-deb.sh Release linux-x64
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-tracker-deb-linux-x64
+          path: artifacts/deb/*.deb

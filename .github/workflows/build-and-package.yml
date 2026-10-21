@@ -59,7 +59,7 @@ jobs:
       - name: Publish windows files for installer
         shell: pwsh
         run: |
-          dotnet publish "Time Tracker/Time Tracker.csproj" -c Release
+          dotnet publish "Time Tracker/Time Tracker.csproj" -c Release -r win-x64 -o "artifacts/publish/win-x64"
 
       - name: Install Inno Setup
         shell: pwsh

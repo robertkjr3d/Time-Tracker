@@ -6,6 +6,7 @@
     <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
     <AssemblyName>Time Tracker</AssemblyName>
     <Product>Time Tracker</Product>
     <Company>Robert Koernke's Consulting</Company>
@@ -13,7 +14,7 @@
     <Version>0.1.0</Version>
     <FileVersion>0.1.0.0</FileVersion>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <PublishDir>$(MSBuildProjectDirectory)\bin\Release\publish\</PublishDir>
+    <PublishDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\publish\$(RuntimeIdentifier)\</PublishDir>
     <Description>A Simple Time Tracking Application.</Description>
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/robertkjr3d/Time-Tracker</PackageProjectUrl>

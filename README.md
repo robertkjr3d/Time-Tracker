@@ -61,7 +61,7 @@ An Inno Setup installer script is already included:
 Build locally on Windows:
 
 ```powershell
-dotnet publish "Time Tracker/Time Tracker.csproj" -c Release
+dotnet publish "Time Tracker/Time Tracker.csproj" -c Release -r win-x64 -o "artifacts/publish/win-x64"
 # Then compile installer/TimeTracker.iss in Inno Setup 6
 ```
 

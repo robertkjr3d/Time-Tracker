@@ -11,11 +11,11 @@ This project includes a Windows-first Inno Setup script at `installer/TimeTracke
 
 From the repository root, run:
 
-`dotnet publish "Time Tracker/Time Tracker.csproj" -c Release`
+`dotnet publish "Time Tracker/Time Tracker.csproj" -c Release -r win-x64 -o "artifacts/publish/win-x64"`
 
-This writes the self-contained Windows publish output to:
+This writes the Windows publish output to:
 
-`Time Tracker/bin/Release/publish/`
+`artifacts/publish/win-x64/`
 
 ## 2. Build the installer
 

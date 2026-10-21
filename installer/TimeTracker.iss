@@ -3,7 +3,7 @@
 #define MyAppPublisher "Robert Koernke's Consulting"
 #define MyAppURL "https://github.com/robertkjr3d/Time-Tracker"
 #define MyAppExeName "Time Tracker.exe"
-#define MyPublishDir "..\Time Tracker\bin\Release\publish\"
+#define MyPublishDir "..\artifacts\publish\win-x64\"
 
 [Setup]
 AppId={{7A3907FE-046B-4A32-9B46-463C2E313A0B}

@@ -1,6 +1,7 @@
 # Time Tracker
 
 Time Tracker is a desktop activity time-tracking app built with .NET 8 and Avalonia.
+This was inspired by the Zanami Time Tracker, that I used for many years. I could never find other desktop-timer-trackers that I liked that was simple and had the functions that I wanted.
 
 ## Features
 

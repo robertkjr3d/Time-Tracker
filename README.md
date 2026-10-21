@@ -51,6 +51,24 @@ Project runtime identifiers are configured for:
 dotnet publish "Time Tracker/Time Tracker.csproj" -c Release -r win-x64
 ```
 
+### Windows installer (Inno Setup)
+
+An Inno Setup installer script is already included:
+
+- `installer/TimeTracker.iss`
+- `installer/README.md`
+
+Build locally on Windows:
+
+```powershell
+dotnet publish "Time Tracker/Time Tracker.csproj" -c Release
+# Then compile installer/TimeTracker.iss in Inno Setup 6
+```
+
+Output installer:
+
+- `installer/Output/TimeTracker-Setup-<version>.exe`
+
 ### Linux publish
 
 ```bash
@@ -93,7 +111,11 @@ Until signed/notarized, users may need manual security override steps to run the
 
 ## CI/CD
 
-GitHub Actions workflow (added in this repo) builds artifacts on every push to `master` for Windows, Linux, and macOS.
+GitHub Actions workflow builds on every push to `master` and produces:
+
+- publish artifacts for Windows, Linux, and macOS RIDs
+- Windows installer (`.exe`) via Inno Setup
+- Linux Debian package (`.deb`) via `packaging/deb/build-deb.sh`
 
 ## License
 

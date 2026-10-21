@@ -44,6 +44,39 @@ jobs:
           name: time-tracker-${{ matrix.rid }}
           path: artifacts/publish/${{ matrix.rid }}/
 
+  build-windows-installer:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish windows files for installer
+        shell: pwsh
+        run: |
+          dotnet publish "Time Tracker/Time Tracker.csproj" -c Release
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/TimeTracker.iss"
+
+      - name: Upload windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-tracker-windows-installer
+          path: installer/Output/*.exe
+
   build-linux-deb:
     runs-on: ubuntu-latest
 
